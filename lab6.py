@@ -53,42 +53,47 @@ def ls(file_system, folder_location):
         print(child.name)
     return file_system
 
-def append(file_system, file_name, file_content):
-    file_system[file_name].content += file_content
-    file_system[file_name].size += len(file_content)
-    return file_system
-
-def read(file_system, file_name):
-    return file_system[file_name].content
-
-def truncate(file_system, file_name, size):
-    file_system[file_name].content = file_system[file_name].content[:size]
-    file_system[file_name].size = size
-    return file_system
-
-def modify(file_system, file_name, file_content):
-    file_system[file_name].content = file_content
-    file_system[file_name].size = len(file_content)
-    return file_system
-
-def delete(file_system, file_name):
-    file_system[file_name].location.children.remove(file_system[file_name])
-    del file_system[file_name]
-    return file_system
-
 def move(file_system, file_name, new_location):
     file_system[file_name].location.children.remove(file_system[file_name])
     file_system[file_name].location = new_location
     file_system[new_location].children += [file_system[file_name]]
     return file_system
+#open file should return file object and all read write move and truncate done through this
 
+def open_file(file_system, file_name):
+    return file_system[file_name]
 
-file_system = create_file_system()
-file_system = create_file(file_system, "file1", "root", "Hello world")
-file_system = create_file(file_system, "file2", "root", "Hi")
-file_system=mkdir(file_system, "folder1", "root")
-file_system=create_file(file_system, "file3", "folder1", "Third fileeeeeee")
-file_system=mkdir(file_system, "folder2", "folder1")
-file_system=create_file(file_system, "file4", "folder2", "Fourth fileeeeeee")
-# json.dumps(file_system)
+def read(file_object, num_bytes):
+    return file_object.content[:num_bytes]
+
+def write(file_object, content):
+    file_object.content += content
+    file_object.size += len(content)
+    return file_object
+
+def truncate(file_object, num_bytes):
+    file_object.content = file_object.content[:num_bytes]
+    file_object.size = num_bytes
+    return file_object
+
+def close(file_object):
+    return file_object
+
+file_system=create_file_system()
+mkdir(file_system, "folder1", "root")
+mkdir(file_system, "folder2", "folder1")
+create_file(file_system, "file1", "folder1", "hello")
+create_file(file_system, "file2", "folder2", "hello")
+create_file(file_system, "file3", "folder2", "hello")
+ls(file_system, "folder1")
 ls(file_system, "folder2")
+file_object=open_file(file_system, "file1")
+print(read(file_object, 3))
+print(file_object.size)
+write(file_object, "world")
+print(file_object.size)
+print(file_object.content)
+truncate(file_object, 3)
+print(file_object.size)
+print(file_object.content)
+close(file_object)
