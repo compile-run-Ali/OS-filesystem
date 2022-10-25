@@ -53,6 +53,36 @@ def ls(file_system, folder_location):
         print(child.name)
     return file_system
 
+def append(file_system, file_name, file_content):
+    file_system[file_name].content += file_content
+    file_system[file_name].size += len(file_content)
+    return file_system
+
+def read(file_system, file_name):
+    return file_system[file_name].content
+
+def truncate(file_system, file_name, size):
+    file_system[file_name].content = file_system[file_name].content[:size]
+    file_system[file_name].size = size
+    return file_system
+
+def modify(file_system, file_name, file_content):
+    file_system[file_name].content = file_content
+    file_system[file_name].size = len(file_content)
+    return file_system
+
+def delete(file_system, file_name):
+    file_system[file_name].location.children.remove(file_system[file_name])
+    del file_system[file_name]
+    return file_system
+
+def move(file_system, file_name, new_location):
+    file_system[file_name].location.children.remove(file_system[file_name])
+    file_system[file_name].location = new_location
+    file_system[new_location].children += [file_system[file_name]]
+    return file_system
+
+
 file_system = create_file_system()
 file_system = create_file(file_system, "file1", "root", "Hello world")
 file_system = create_file(file_system, "file2", "root", "Hi")
