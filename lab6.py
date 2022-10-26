@@ -1,9 +1,7 @@
 #implementing an operating system in python
 import json
-
-
 class Folder():
-    def __init__(self, name, location, children = []):
+    def __init__(self, name, location, children = {}):
         self.name = name
         self.location = location
         self.children=children
@@ -79,6 +77,17 @@ def truncate(file_object, num_bytes):
 def close(file_object):
     return file_object
 
+def moveContentWithinFile(file_object, start, end, new_start):
+    content = file_object.content[start:end]
+    file_object.content = file_object.content[:start] + file_object.content[end:]
+    file_object.content = file_object.content[:new_start] + content + file_object.content[new_start:]
+    return file_object
+
+def showMemoryMap(file_system):
+    for key in file_system:
+        print(key, file_system[key].size)
+    return file_system
+
 file_system=create_file_system()
 mkdir(file_system, "folder1", "root")
 mkdir(file_system, "folder2", "folder1")
@@ -97,3 +106,4 @@ truncate(file_object, 3)
 print(file_object.size)
 print(file_object.content)
 close(file_object)
+showMemoryMap(file_system)
