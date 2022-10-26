@@ -5,14 +5,13 @@ class Folder():
         self.name = name
         self.location = location
         self.children=children
-        self.size=self.computeSize()
 
-    def computeSize(self):
-        total=0
+    def get_size(self):
+        size = 0
         for child in self.children:
-            total+=child.size
-        
-        return total
+            size += child.get_size()
+        return size
+
     def __str__(self):
         return self.name + " " + self.location + " " + str(self.size) + " " + str(self.children)
     
@@ -22,10 +21,10 @@ class File():
         self.location = location
         self.size = len(content) #assuming 1 character per byte
         self.content=content
+    def get_size(self):
+        return self.size
     def __str__(self):
         return self.name + " " + self.location + " " + self.size + " " + self.content
-    def length(self):
-        return self.size
         
 
 #using a dictionary to store pointer to files
@@ -34,11 +33,10 @@ def create_file_system():
     file_system["root"] = Folder("root", "root", [])
     return file_system
 
-def create_file(file_system, file_name, file_location , file_content):
-    file_system[file_name] = File(file_name, file_location, file_content)
-    file_system[file_name].size = len(file_content)
+ 
+def create_file(file_system, file_name, file_location, content):
+    file_system[file_name] = File(file_name, file_location, content)
     file_system[file_location].children += [file_system[file_name]]
-    file_system[file_location].size += file_system[file_name].size
     return file_system
 
 def mkdir(file_system, folder_name, folder_location):
@@ -85,7 +83,7 @@ def moveContentWithinFile(file_object, start, end, new_start):
 
 def showMemoryMap(file_system):
     for key in file_system:
-        print(key, file_system[key].size)
+        print(key, file_system[key].get_size())
     return file_system
 
 file_system=create_file_system()
@@ -94,16 +92,8 @@ mkdir(file_system, "folder2", "folder1")
 create_file(file_system, "file1", "folder1", "hello")
 create_file(file_system, "file2", "folder2", "hello")
 create_file(file_system, "file3", "folder2", "hello")
-ls(file_system, "folder1")
-ls(file_system, "folder2")
-file_object=open_file(file_system, "file1")
-print(read(file_object, 3))
-print(file_object.size)
-write(file_object, "world")
-print(file_object.size)
-print(file_object.content)
-truncate(file_object, 3)
-print(file_object.size)
-print(file_object.content)
-close(file_object)
+mkdir(file_system, "folder3", "folder2")
+create_file(file_system, "file4", "folder3", "hello")
+create_file(file_system, "file5", "folder3", "hello")
+
 showMemoryMap(file_system)
