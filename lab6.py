@@ -162,6 +162,11 @@ def show_memory_map(file_system):
         json.dump(file_system, outfile, cls=customEncoder, indent=4)
     return file_system
 
+#print memory map
+def print_memory_map(file_system):
+    print(json.dumps(file_system, cls=customEncoder, indent=4))
+    return file_system
+
 #recursivelt printing and size
 def print_file_system(file_system):
     for child in file_system:
@@ -208,6 +213,9 @@ file_system=move_file(file_system,file_system,"file1","root","root/folder1")
 
 
 print_file_system(file_system)
+#printing memory map
+show_memory_map(file_system)
+print_memory_map(file_system)
 
 
 
