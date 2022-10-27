@@ -32,12 +32,10 @@ class File():
         return self.name + " " + self.location + " " + self.size + " " + self.content
 
 
-# using a dictionary to store pointer to files
 def create_file_system():
     file_system = {}
     file_system["root"] = Folder("root", "/", {})
     return file_system
-
 
 # take path for folder and then go into the children and store in that directory
 def mkdir(file_system, folder_name, folder_location,originalFolderLocation):
@@ -184,6 +182,7 @@ def print_folders(file_system):
 
 
 
+#main
 file_system=create_file_system()
 file_system=mkdir(file_system,"folder1","root","root/folder1")
  
@@ -207,27 +206,10 @@ ls(file_system, "root/folder1")
 #moving file 2
 file_system=move_file(file_system,file_system,"file1","root","root/folder1")
 
-#show 
-show_memory_map(file_system)
 
-#size of each element
-print_folders(file_system)
-
-#open
-file_object=open_file(file_system,"file1","root/folder1")
-
-#read
-print(read(file_object))
-
-#write
-
-#truncate
+print_file_system(file_system)
 
 
-#move content
-moveContentWithinFile(file_object,0,2,2)
 
-print(read(file_object))
-#close
-close_file(file_object)
+
 
