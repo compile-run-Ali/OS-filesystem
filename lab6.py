@@ -29,20 +29,82 @@ class File():
         return self.size
 
     def __str__(self):
-        return self.name + " " + self.location + " " + self.size + " " + self.content
+        return self.name + " " + self.location + " " + str(self.size) + " " + self.content
 
+#making a disk class with blocks and random access
+class Disk():
+    def __init__(self, size, block_size):
+        self.size = size
+        self.block_size = block_size
+        self.blocks = []
+        self.free_blocks = []
+        self.used_blocks = []
+        self.block_count = int(size / block_size)
+        for i in range(self.block_count):
+            self.blocks.append(None)
+            self.free_blocks.append(i)
 
-def create_file_system():
+    def get_free_block(self):
+        if (len(self.free_blocks) == 0):
+            return None
+        else:
+            return self.free_blocks.pop(0)
+
+    def get_used_block(self, block_number):
+        if (block_number in self.used_blocks):
+            return self.blocks[block_number]
+        else:
+            return None
+
+    #write in first available free block
+    def write(self, data):
+        block_number = self.get_free_block()
+        if (block_number == None):
+            return None
+        else:
+            self.blocks[block_number] = data
+            self.used_blocks.append(block_number)
+            return block_number
+
+    def read(self, block_number):
+        if (block_number in self.used_blocks):
+            return self.blocks[block_number]
+        else:
+            return None
+
+    #delete according to the name of the file
+    def delete(self, name):
+        for i in range(len(self.blocks)):
+            if self.blocks[i] == name:
+                self.blocks[i] = None
+                self.free_blocks.append(i)
+                self.used_blocks.remove(i)
+                return True
+        return False
+
+    def print_blocks(self):
+        for i in range(len(self.blocks)):
+            print("Block " + str(i) + ": " + str(self.blocks[i]))
+        
+
+    def __str__(self):
+        return "Disk size: " + str(self.size) + " Block size: " + str(self.block_size) + " Block count: " + str(self.block_count) + " Free blocks: " + str(self.free_blocks) + " Used blocks: " + str(self.used_blocks)
+
+def create_file_system(memory):
     file_system = {}
     file_system["root"] = Folder("root", "/", {})
+    #storing in memory too
+    memory.write(file_system["root"])
     return file_system
 
 # take path for folder and then go into the children and store in that directory
-def mkdir(file_system, folder_name, folder_location,originalFolderLocation):
+def mkdir(file_system, folder_name, folder_location,originalFolderLocation,memory):
     path = folder_location.split("/")
     if (len(path) == 1):
         print("creating folder in",file_system[folder_location].name)
         file_system[folder_location].children[folder_name] = Folder(folder_name, originalFolderLocation, {})
+        #storing in memory too according to data
+        memory.write(file_system[folder_location].children[folder_name])
     else:
         # remove index 0 from path
         temp=path.pop(0)
@@ -50,11 +112,13 @@ def mkdir(file_system, folder_name, folder_location,originalFolderLocation):
         mkdir(file_system[temp].children, folder_name, new_folder_location, originalFolderLocation)
     return file_system
 
-def delete_file(file_system, file_name, file_location):
+def delete_file(file_system, file_name, file_location,memory):
     path = file_location.split("/")
     if (len(path) == 1):
         print("deleting file",file_name,"from",file_system[file_location].name)
         del file_system[file_location].children[file_name]
+        #deleting from memory too according to name
+        memory.delete(file_name)
     else:
         # remove index 0 from path
         temp=path.pop(0)
@@ -62,16 +126,18 @@ def delete_file(file_system, file_name, file_location):
         delete_file(file_system[temp].children, file_name, temp_location)
     return file_system
 
-def create_file(file_system, file_name, file_location,originalFolderLocation, content):
+def create_file(file_system, file_name, file_location,originalFolderLocation, content,memory):
     path = file_location.split("/")
     if (len(path) == 1):
         print("creating file in",file_system[file_location].name)
         file_system[file_location].children[file_name] = File(file_name, originalFolderLocation, content)
+        #storing in memory too according to data
+        memory.write(file_system[file_location].children[file_name])
     else:
         # remove index 0 from path
         temp=path.pop(0)
         new_file_location = "/".join(path)
-        create_file(file_system[temp].children, file_name, new_file_location,originalFolderLocation, content)
+        create_file(file_system[temp].children, file_name, new_file_location,originalFolderLocation, content,memory)
     return file_system
 
 
@@ -94,6 +160,8 @@ def copy_file(file_system,originalFileSystem, file_name, file_location, new_file
         #moving file to last index of path2
         print("copying file",file_name,"from",file_system[file_location].name,"to",new_file_location)
         create_file(originalFileSystem, file_name, new_file_location, new_file_location, file_system[file_location].children[file_name].content)
+        #copying to another location in memory
+        memory.write(originalFileSystem[new_file_location].children[file_name])
     else:
         # remove index 0 from path
         temp=path.pop(0)
@@ -101,14 +169,13 @@ def copy_file(file_system,originalFileSystem, file_name, file_location, new_file
         copy_file(file_system[temp].children,originalFileSystem, file_name, temp_location, new_file_location)
     return file_system
 
-def move_file(file_system,original_file_system, file_name, file_location, new_file_location):
+def move_file(file_system,original_file_system, file_name, file_location, new_file_location,memory):
     path = file_location.split("/")
     if (len(path) == 1):
         #moving file to last index of path2
         print("moving file",file_name,"from",file_system[file_location].name,"to",new_file_location)
-        print( file_system[file_location].children[file_name].content)
-        create_file(original_file_system, file_name, new_file_location, new_file_location, file_system[file_location].children[file_name].content)
-        delete_file(original_file_system, file_name, file_location)
+        create_file(original_file_system, file_name, new_file_location, new_file_location, file_system[file_location].children[file_name].content,memory)
+        delete_file(original_file_system, file_name, file_location,memory)
     else:
         # remove index 0 from path
         temp=path.pop(0)
@@ -133,6 +200,7 @@ def read(file_object):
 
 def write(file_object, start, end, content):
     file_object.content = file_object.content[:start] + content + file_object.content[end:]
+
     return file_object
 
 def truncate(file_object, size):
@@ -167,6 +235,7 @@ def print_memory_map(file_system):
     print(json.dumps(file_system, cls=customEncoder, indent=4))
     return file_system
 
+
 #recursivelt printing and size
 def print_file_system(file_system):
     for child in file_system:
@@ -188,36 +257,30 @@ def print_folders(file_system):
 
 
 #main
-file_system=create_file_system()
-file_system=mkdir(file_system,"folder1","root","root/folder1")
+#disk initialization with 4gb size and 1kb block size
+memory=Disk(1024, 10)
+
+file_system=create_file_system(memory)
+file_system=mkdir(file_system,"folder1","root","root/folder1",memory)
  
-file_system=mkdir(file_system,"folder2","root","root/folder2")
-file_system=mkdir(file_system,"folder3","root","root/folder3")
-
-file_system=mkdir(file_system,"folder4","root/folder1","root/folder1/folder4")
-
-file_system=mkdir(file_system,"folder5","root/folder1/folder4","root/folder1/folder4/folder5")
 
 #files
-file_system=create_file(file_system,"file1","root","root","file1")
-file_system=create_file(file_system,"file2","root","root","file2")
- 
-file_system=create_file(file_system,"file3","root/folder1","root/folder1","file3")
+file_system=create_file(file_system,"file1","root","root","file1",memory)
+
 
 #using ls
 ls(file_system, "root")
 ls(file_system, "root/folder1")
 
-#moving file 2
-file_system=move_file(file_system,file_system,"file1","root","root/folder1")
-
+#moving file 1 to folder 1
+move_file(file_system,file_system, "file1", "root", "root/folder1",memory)
 
 print_file_system(file_system)
 #printing memory map
 show_memory_map(file_system)
 print_memory_map(file_system)
-
-
+#print disk blocks
+memory.print_blocks()
 
 
 
