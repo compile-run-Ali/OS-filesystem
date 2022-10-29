@@ -1,4 +1,5 @@
 # implementing an operating system in python
+from inspect import getblock
 import json
 
 
@@ -7,15 +8,19 @@ class Folder():
         self.name = name
         self.location = location
         self.children = children
+        self.block_numbers = []
 
     def get_size(self):
         size = 0
         for child in self.children:
             size += self.children[child].get_size()
         return size
+    #getter for blocks
+    def get_blocks(self):
+        return self.block_numbers
 
     def __str__(self):
-        return self.name + " " + self.location + " " + str(self.get_size()) + " " + str(self.children)
+        return self.name + " " + self.location + " " + str(self.get_size()) + " " + str(self.children)+ " " + str(self.block_numbers)
 
 
 class File():
@@ -24,12 +29,13 @@ class File():
         self.location = location
         self.size = len(content)  # assuming 1 character per byte
         self.content = content
+        self.block_numbers = []
 
     def get_size(self):
         return self.size
 
     def __str__(self):
-        return self.name + " " + self.location + " " + str(self.size) + " " + self.content
+        return self.name + " " + self.location + " " + str(self.size) + " " + self.content+ " " + str(self.block_numbers)
 
 #making a disk class with blocks and random access
 class Disk():
@@ -56,15 +62,36 @@ class Disk():
         else:
             return None
 
-    #write in first available free block
-    def write(self, data):
-        block_number = self.get_free_block()
-        if (block_number == None):
-            return None
+    #write in first available free block according to size of file, if file size is greater than block number, we store in multiple blocks
+    def write(self, file):
+        if (file.get_size() > self.block_size):
+            #if file size greater, we store in multiple blocks
+            #we need to check if we have enough free blocks to store the file
+            if (file.get_size() > len(self.free_blocks) * self.block_size):
+                return False
+            else:
+                block_numbers = []
+                for i in range(int(file.get_size() / self.block_size)):
+                    block_number = self.get_free_block()
+                    block_numbers.append(block_number)
+                    self.used_blocks.append(block_number)
+                    self.blocks[block_number] = file
+                file.block_numbers = block_numbers
+                return True
         else:
-            self.blocks[block_number] = data
-            self.used_blocks.append(block_number)
-            return block_number
+            #if file size is less than block size, we store in one block
+            #we need to check if we have a free block to store the file
+            if (len(self.free_blocks) == 0):
+                return False
+            else:
+                block_number = self.get_free_block()
+                file.block_number = block_number
+                self.used_blocks.append(block_number)
+                self.blocks[block_number] = file
+                return True
+        #return a block number for the file
+        
+            
 
     def read(self, block_number):
         if (block_number in self.used_blocks):
@@ -72,15 +99,21 @@ class Disk():
         else:
             return None
 
-    #delete according to the name of the file
-    def delete(self, name):
-        for i in range(len(self.blocks)):
-            if self.blocks[i] == name:
-                self.blocks[i] = None
-                self.free_blocks.append(i)
-                self.used_blocks.remove(i)
-                return True
-        return False
+
+    def delete(self, file, block_number):
+        print(block_number)
+        #check list of block numbers in used
+        i=-1
+        while(block_number[i] in self.used_blocks):
+            #remove from used blocks
+            self.used_blocks.remove(block_number[i])
+            #add to free blocks
+            self.free_blocks.append(block_number[i])
+            #remove from blocks
+            self.blocks[block_number[i]] = None
+            i+=1
+        return True
+
 
     def print_blocks(self):
         for i in range(len(self.blocks)):
@@ -105,6 +138,7 @@ def mkdir(file_system, folder_name, folder_location,originalFolderLocation,memor
         file_system[folder_location].children[folder_name] = Folder(folder_name, originalFolderLocation, {})
         #storing in memory too according to data
         memory.write(file_system[folder_location].children[folder_name])
+
     else:
         # remove index 0 from path
         temp=path.pop(0)
@@ -116,14 +150,14 @@ def delete_file(file_system, file_name, file_location,memory):
     path = file_location.split("/")
     if (len(path) == 1):
         print("deleting file",file_name,"from",file_system[file_location].name)
+        memory.delete(file_name,file_system[file_location].children[file_name].block_numbers)
         del file_system[file_location].children[file_name]
         #deleting from memory too according to name
-        memory.delete(file_name)
     else:
         # remove index 0 from path
         temp=path.pop(0)
         temp_location = "/".join(path)
-        delete_file(file_system[temp].children, file_name, temp_location)
+        delete_file(file_system[temp].children, file_name, temp_location,memory)
     return file_system
 
 def create_file(file_system, file_name, file_location,originalFolderLocation, content,memory):
@@ -258,27 +292,34 @@ def print_folders(file_system):
 
 #main
 #disk initialization with 4gb size and 1kb block size
-memory=Disk(1024, 10)
+memory=Disk(100, 10)
 
 file_system=create_file_system(memory)
 file_system=mkdir(file_system,"folder1","root","root/folder1",memory)
  
 
 #files
-file_system=create_file(file_system,"file1","root","root","file1",memory)
+file_system=create_file(file_system,"file1","root","root","file1 is this name is",memory)
+file_system=create_file(file_system,"file2","root","root","file2 is this name is",memory)
+file_system=create_file(file_system,"file3","root","root","file3 is this name is",memory)
+file_system=create_file(file_system,"file4","root","root","file4 is this name is",memory)
+file_system=create_file(file_system,"file5","root","root","file5 is this name is",memory)
 
 
 #using ls
 ls(file_system, "root")
 ls(file_system, "root/folder1")
 
-#moving file 1 to folder 1
-move_file(file_system,file_system, "file1", "root", "root/folder1",memory)
+memory.print_blocks()
 
-print_file_system(file_system)
+#move
+move_file(file_system,file_system, "file3", "root", "root/folder1",memory)
+
+
+# print_file_system(file_system)
 #printing memory map
-show_memory_map(file_system)
-print_memory_map(file_system)
+# show_memory_map(file_system)
+# print_memory_map(file_system)
 #print disk blocks
 memory.print_blocks()
 
